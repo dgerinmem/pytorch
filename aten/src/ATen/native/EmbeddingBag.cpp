@@ -730,7 +730,7 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
   } else {
     out = at::_embedding_bag(
       weight, indices.contiguous(), offsets.contiguous(), scale_grad_by_freq,
-      mode, sparse, per_sample_weights, include_last_offset, padding_idx);
+      mode, sparse, per_sample_weights, include_last_offset, padding_idx, table_no);
   }
   return out;
 };
@@ -739,9 +739,9 @@ std::tuple<Tensor, Tensor, Tensor, Tensor>
 embedding_bag(const Tensor &weight, const Tensor &indices,
               const Tensor &offsets, const bool scale_grad_by_freq,
               const int64_t mode, bool sparse, const c10::optional<Tensor>& per_sample_weights_opt,
-              bool include_last_offset) {
+              bool include_last_offset, const int64_t table_no) {
   return at::native::embedding_bag(weight, indices, offsets, scale_grad_by_freq,
-      mode, sparse, per_sample_weights_opt, include_last_offset, c10::nullopt);
+      mode, sparse, per_sample_weights_opt, include_last_offset, c10::nullopt, table_no);
 }
 
 // Assumes all input tensors except for `weight` are contiguous.
@@ -773,7 +773,7 @@ std::tuple<Tensor, Tensor, Tensor, Tensor>
 _embedding_bag_cpu(const Tensor &weight, const Tensor &indices,
                   const Tensor &offsets, const bool scale_grad_by_freq,
                   const int64_t mode, bool sparse, const c10::optional<Tensor>& per_sample_weights_opt, bool include_last_offset,
-                  int64_t padding_idx) {
+                  int64_t padding_idx, int64_t table_no) {
   // See [Note: hacky wrapper removal for optional tensor]
   c10::MaybeOwned<Tensor> per_sample_weights_maybe_owned = at::borrow_from_optional_tensor(per_sample_weights_opt);
   const Tensor& per_sample_weights = *per_sample_weights_maybe_owned;
