@@ -310,6 +310,9 @@ class EmbeddingBag(Module):
     include_last_offset: bool
     padding_idx: Optional[int]
 
+    # TESTING CUSTOM ARGUMENT
+    table_no: int
+
     def __init__(self, num_embeddings: int, embedding_dim: int,
                  max_norm: Optional[float] = None, norm_type: float = 2., scale_grad_by_freq: bool = False,
                  mode: str = 'mean', sparse: bool = False, _weight: Optional[Tensor] = None,
@@ -349,7 +352,7 @@ class EmbeddingBag(Module):
             with torch.no_grad():
                 self.weight[self.padding_idx].fill_(0)
 
-    def forward(self, input: Tensor, offsets: Optional[Tensor] = None, per_sample_weights: Optional[Tensor] = None) -> Tensor:
+    def forward(self, input: Tensor, offsets: Optional[Tensor] = None, per_sample_weights: Optional[Tensor] = None, table_no: int = 0) -> Tensor:
         """Forward pass of EmbeddingBag.
 
         Args:
@@ -380,11 +383,12 @@ class EmbeddingBag(Module):
               :attr:`input` will be viewed as having ``B`` bags. Empty bags (i.e., having 0-length) will have
               returned vectors filled by zeros.
         """
+
         return F.embedding_bag(input, self.weight, offsets,
                                self.max_norm, self.norm_type,
                                self.scale_grad_by_freq, self.mode, self.sparse,
                                per_sample_weights, self.include_last_offset,
-                               self.padding_idx)
+                               self.padding_idx, table_no)
 
     def extra_repr(self) -> str:
         s = '{num_embeddings}, {embedding_dim}'

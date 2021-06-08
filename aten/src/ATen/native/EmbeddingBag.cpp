@@ -22,6 +22,8 @@
 #include <tuple>
 #include <vector>
 
+// For testing modification to function
+using namespace std;
 
 namespace {
   const int MODE_SUM = 0;
@@ -712,6 +714,9 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
   c10::MaybeOwned<Tensor> per_sample_weights_maybe_owned = at::borrow_from_optional_tensor(per_sample_weights_opt);
   const Tensor& per_sample_weights = *per_sample_weights_maybe_owned;
   int64_t padding_idx = -1;
+
+  // For testing modification to function definition
+  cout << "TESTING (IN ATEN C++): table_no value passed in: " << table_no << "\n";
 
   if (padding_idx_opt.has_value()) {
     auto num_embeddings = weight.size(0);
