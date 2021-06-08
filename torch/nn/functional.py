@@ -2055,6 +2055,7 @@ def embedding_bag(
     per_sample_weights: Optional[Tensor] = None,
     include_last_offset: bool = False,
     padding_idx: Optional[int] = None,
+    table_no: int = 0
 ) -> Tensor:
     r"""Computes sums, means or maxes of `bags` of embeddings, without instantiating the
     intermediate embeddings.
@@ -2149,6 +2150,7 @@ def embedding_bag(
             per_sample_weights=per_sample_weights,
             include_last_offset=include_last_offset,
             padding_idx=padding_idx,
+            table_no=table_no
         )
     # Check for backward compatibility.
     # Used to be embedding_bag(weight, input, ...)
@@ -2222,7 +2224,7 @@ def embedding_bag(
         )
 
     ret, _, _, _ = torch.embedding_bag(
-        weight, input, offsets, scale_grad_by_freq, mode_enum, sparse, per_sample_weights, include_last_offset, padding_idx
+        weight, input, offsets, scale_grad_by_freq, mode_enum, sparse, per_sample_weights, include_last_offset, padding_idx, table_no
     )
     return ret
 
