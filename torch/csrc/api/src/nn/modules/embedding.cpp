@@ -127,7 +127,8 @@ torch::Tensor EmbeddingBagImpl::forward(const Tensor& input, const Tensor& offse
     options.sparse(),
     per_sample_weights,
     options.include_last_offset(),
-    options.padding_idx());
+    options.padding_idx(),
+    options.table_no());
 }
 
 void EmbeddingBagImpl::pretty_print(std::ostream& stream) const {

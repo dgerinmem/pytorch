@@ -204,6 +204,8 @@ struct TORCH_API EmbeddingBagFuncOptions {
   /// during training, i.e. it remains as a fixed "pad". Note that the embedding
   /// vector at `padding_idx` is excluded from the reduction.
   TORCH_ARG(c10::optional<int64_t>, padding_idx) = c10::nullopt;
+  /// TESTING
+  TORCH_ARG(int64_t, table_no) = 0;
 };
 
 } // namespace functional
