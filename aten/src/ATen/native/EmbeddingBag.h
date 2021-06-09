@@ -44,6 +44,7 @@ void _embedding_bag_cpu_impl_out(Tensor& output, Tensor& offset2bag,
     const Tensor &offsets, const int64_t mode = 0,
     const c10::optional<Tensor>& per_sample_weights = c10::nullopt,
     bool include_last_offset = false,
-    int64_t padding_idx = -1);
+    int64_t padding_idx = -1,
+    int64_t table_no = 0);
 } // native
 } // at

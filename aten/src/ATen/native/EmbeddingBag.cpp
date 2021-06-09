@@ -636,7 +636,11 @@ void _embedding_bag_cpu_impl_out(Tensor& output, Tensor& offset2bag,
                             const Tensor &weight, const Tensor &indices,
                             const Tensor &offsets, const int64_t mode,
                             const c10::optional<Tensor>& per_sample_weights,
-                            bool include_last_offset, int64_t padding_idx) {
+                            bool include_last_offset, int64_t padding_idx, int64_t table_no) {
+
+  // Testing argument passing
+  cout << "TESTING (ATEN C++, _embedding_bag_cpu_impl_out(...)): table_no value passed in: " << table_no << "\n";
+
   if (mode == MODE_MEAN || mode == MODE_SUM) {
     AT_DISPATCH_FLOATING_TYPES(weight.scalar_type(), "embedding_bag_no_grad_cpu_out",
       [&indices, &offset2bag, &per_sample_weights, &weight, &output, &offsets, &include_last_offset, &mode, &bag_size, &padding_idx]() {
@@ -677,7 +681,8 @@ std::tuple<Tensor, Tensor, Tensor, Tensor> _embedding_bag_cpu_impl(
     const Tensor& per_sample_weights,
     bool include_last_offset,
     int64_t padding_idx,
-    bool requires_grad) {
+    bool requires_grad,
+    int64_t table_no) {
   Tensor indices, offsets;
   std::tie(indices, offsets) = promoteIndicesAndOffsets(indices_, offsets_);
   check_arguments(weight, indices, offsets, mode, per_sample_weights, include_last_offset);
@@ -697,7 +702,7 @@ std::tuple<Tensor, Tensor, Tensor, Tensor> _embedding_bag_cpu_impl(
                           bag_size, max_indices,
                           weight, indices, offsets,
                           mode, per_sample_weights,
-                          include_last_offset, padding_idx);
+                          include_last_offset, padding_idx, table_no);
 
   return std::make_tuple(std::move(output), std::move(offset2bag), std::move(bag_size), std::move(max_indices));
 }
@@ -716,7 +721,7 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
   int64_t padding_idx = -1;
 
   // For testing modification to function definition
-  cout << "TESTING (IN ATEN C++): table_no value passed in: " << table_no << "\n";
+  cout << "TESTING (ATEN C++, embedding_bag(...)): table_no value passed in: " << table_no << "\n";
 
   if (padding_idx_opt.has_value()) {
     auto num_embeddings = weight.size(0);
@@ -761,6 +766,10 @@ _embedding_bag_forward_only_cpu(const Tensor &weight, const Tensor &indices,
   const Tensor& per_sample_weights = *per_sample_weights_maybe_owned;
   std::ignore = scale_grad_by_freq;
   std::ignore = sparse;
+
+  // Don't have table_no in this!
+  int64_t table_no = 0;
+
   return _embedding_bag_cpu_impl(
       weight,
       indices,
@@ -769,7 +778,8 @@ _embedding_bag_forward_only_cpu(const Tensor &weight, const Tensor &indices,
       per_sample_weights,
       include_last_offset,
       padding_idx,
-      /*requires_grad=*/false);
+      /*requires_grad=*/false,
+      table_no);
 }
 
 // Assumes all input tensors except for `weight` are contiguous.
@@ -793,7 +803,8 @@ _embedding_bag_cpu(const Tensor &weight, const Tensor &indices,
       per_sample_weights,
       include_last_offset,
       padding_idx,
-      /*requires_grad=*/true);
+      /*requires_grad=*/true,
+      table_no);
 }
 
 // Assumes all input tensors are contiguous.

@@ -1306,7 +1306,8 @@ REGISTER_OPERATOR_FUNCTOR(
             mode,
             per_sample_weights,
             include_last_offset,
-            padding_idx.value_or(-1));
+            padding_idx.value_or(-1),
+            0);
       };
     });
 
