@@ -1,3 +1,11 @@
+This brnach gives a modified implementation of PyTorch to use the UPMEM DIMMs for processing.
+
+This document outlines how to make modifications to Python and C++ functions in this library:
+
+https://docs.google.com/document/d/18toMyUYZisaMWmlr5ARBZqBSTV5tac2hSetiqAkHbVI/edit?usp=sharing
+
+--------------------------------------------------------------------------------
+
 ![PyTorch Logo](https://github.com/pytorch/pytorch/blob/master/docs/source/_static/img/pytorch-logo-dark.png)
 
 --------------------------------------------------------------------------------
