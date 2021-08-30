@@ -22,6 +22,8 @@
 #include <tuple>
 #include <vector>
 
+#include <sys/time.h>
+
 // For testing modification to function
 using namespace std;
 
@@ -637,10 +639,6 @@ void _embedding_bag_cpu_impl_out(Tensor& output, Tensor& offset2bag,
                             const Tensor &offsets, const int64_t mode,
                             const c10::optional<Tensor>& per_sample_weights,
                             bool include_last_offset, int64_t padding_idx, int64_t table_no) {
-
-  // Testing argument passing
-  cout << "TESTING (ATEN C++, _embedding_bag_cpu_impl_out(...)): table_no value passed in: " << table_no << "\n";
-
   if (mode == MODE_MEAN || mode == MODE_SUM) {
     AT_DISPATCH_FLOATING_TYPES(weight.scalar_type(), "embedding_bag_no_grad_cpu_out",
       [&indices, &offset2bag, &per_sample_weights, &weight, &output, &offsets, &include_last_offset, &mode, &bag_size, &padding_idx]() {
@@ -715,13 +713,15 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
               const Tensor &offsets, const bool scale_grad_by_freq,
               const int64_t mode, bool sparse, const c10::optional<Tensor>& per_sample_weights_opt,
               bool include_last_offset, c10::optional<int64_t> padding_idx_opt, const int64_t table_no) {
+  // Control time test
+  //timeval func_start, func_end;
+  //std::cout << "START TIME TEST\n";
+  //if (gettimeofday(&func_start, NULL)) std::cout << "BAD TIME RECORD AT START\n";
+  
   // See [Note: hacky wrapper removal for optional tensor]
   c10::MaybeOwned<Tensor> per_sample_weights_maybe_owned = at::borrow_from_optional_tensor(per_sample_weights_opt);
   const Tensor& per_sample_weights = *per_sample_weights_maybe_owned;
   int64_t padding_idx = -1;
-
-  // For testing modification to function definition
-  cout << "TESTING (ATEN C++, embedding_bag(...)): table_no value passed in: " << table_no << "\n";
 
   if (padding_idx_opt.has_value()) {
     auto num_embeddings = weight.size(0);
@@ -742,6 +742,9 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
       weight, indices.contiguous(), offsets.contiguous(), scale_grad_by_freq,
       mode, sparse, per_sample_weights, include_last_offset, padding_idx, table_no);
   }
+
+  //if (gettimeofday(&func_end, NULL)) std::cout << "BAD TIME RECORD AT END\n";
+  //cout << "TIME ELASPED: " << func_end.tv_usec - func_start.tv_usec << "us\n\n";
   return out;
 };
 

@@ -2,7 +2,8 @@ r""""Contains definitions of the methods used by the _BaseDataLoaderIter to fetc
 data from an iterable-style or map-style dataset. This logic is shared in both
 single- and multi-processing data loading.
 """
-
+import cProfile, pstats, io
+from pstats import SortKey
 
 class _BaseDatasetFetcher(object):
     def __init__(self, dataset, auto_collation, collate_fn, drop_last):
@@ -22,6 +23,7 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
         self.ended = False
 
     def fetch(self, possibly_batched_index):
+
         if self.ended:
             raise StopIteration
 
@@ -30,6 +32,7 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
             for _ in possibly_batched_index:
                 try:
                     data.append(next(self.dataset_iter))
+                    
                 except StopIteration:
                     self.ended = True
                     break
@@ -37,6 +40,7 @@ class _IterableDatasetFetcher(_BaseDatasetFetcher):
                 raise StopIteration
         else:
             data = next(self.dataset_iter)
+
         return self.collate_fn(data)
 
 

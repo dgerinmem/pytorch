@@ -21,6 +21,9 @@ from torch._six import string_classes
 from . import IterableDataset, Sampler, SequentialSampler, RandomSampler, BatchSampler, Dataset
 from . import _utils
 
+import cProfile, pstats, io
+from pstats import SortKey
+
 T_co = TypeVar('T_co', covariant=True)
 T = TypeVar('T')
 _worker_init_fn_t = Callable[[int], None]
