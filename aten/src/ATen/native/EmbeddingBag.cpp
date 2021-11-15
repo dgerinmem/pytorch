@@ -25,6 +25,15 @@
 #include <sys/time.h>
 
 // For testing modification to function
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <ATen/Parallel.h>
+
+// For hosting DPUs
+#include <dpu>
+#include <iomanip>
+using namespace dpu;
 using namespace std;
 
 namespace {
@@ -705,6 +714,23 @@ std::tuple<Tensor, Tensor, Tensor, Tensor> _embedding_bag_cpu_impl(
   return std::make_tuple(std::move(output), std::move(offset2bag), std::move(bag_size), std::move(max_indices));
 }
 
+void standard_threading_test(int num, dpu::DpuSet* dpu) {
+  // wait for main
+  // std::unique_lock<std::mutex> lk(m);
+  // thread_test_cv.wait(lk, []{return ready;});
+
+  std::cout << "TRIAL: std_threading_test: " << num << " - START\n";
+    // PIM-NOTE: UPMEM DPU HOST TEST
+    std::cout << "Starting DPU testing\n";
+    // auto dpu = system.dpus()[num % 10];
+    dpu->load("/mnt/scratch3/justin/DISTRIBUTED-PIM-Pytorch/upmem/dpu_task");
+    dpu->exec();
+    dpu->log(std::cout);
+    std::cout << "DPU testing ended\n";
+    
+    std::cout << "TRIAL: std_threading_test: " << num << " - END\n";
+}
+
 // embedding_bag wrapper to enforce contiguity in tensors other than `weight`.
 // This is created to save extra `.contiguous()` call in backward.
 // See NOTE [ embedding_bag Native Functions ] in native_functions.yaml for details
@@ -713,10 +739,20 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
               const Tensor &offsets, const bool scale_grad_by_freq,
               const int64_t mode, bool sparse, const c10::optional<Tensor>& per_sample_weights_opt,
               bool include_last_offset, c10::optional<int64_t> padding_idx_opt, const int64_t table_no) {
-  // Control time test
-  //timeval func_start, func_end;
-  //std::cout << "START TIME TEST\n";
-  //if (gettimeofday(&func_start, NULL)) std::cout << "BAD TIME RECORD AT START\n";
+  
+  // PIM-NOTE: THREADING TEST
+  // STD:
+  std::cout << "TABLE_NO: " << table_no << "\n";
+
+  auto system = DpuSet::allocate(10);
+  std::vector<std::thread> thread_list;
+  for (int i = 0; i < 10; i++) {
+    thread_list.push_back(std::thread(standard_threading_test, table_no * 10 + i, system.dpus()[i]));
+  }
+
+  for (int i = 0; i < 10; i++) {
+    thread_list[i].join();
+  }
   
   // See [Note: hacky wrapper removal for optional tensor]
   c10::MaybeOwned<Tensor> per_sample_weights_maybe_owned = at::borrow_from_optional_tensor(per_sample_weights_opt);
@@ -742,9 +778,6 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
       weight, indices.contiguous(), offsets.contiguous(), scale_grad_by_freq,
       mode, sparse, per_sample_weights, include_last_offset, padding_idx, table_no);
   }
-
-  //if (gettimeofday(&func_end, NULL)) std::cout << "BAD TIME RECORD AT END\n";
-  //cout << "TIME ELASPED: " << func_end.tv_usec - func_start.tv_usec << "us\n\n";
   return out;
 };
 
