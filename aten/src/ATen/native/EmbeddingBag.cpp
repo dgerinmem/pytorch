@@ -33,6 +33,7 @@
 // For hosting DPUs
 #include <dpu>
 #include <iomanip>
+#include <stdexcept>
 using namespace dpu;
 using namespace std;
 
@@ -714,21 +715,33 @@ std::tuple<Tensor, Tensor, Tensor, Tensor> _embedding_bag_cpu_impl(
   return std::make_tuple(std::move(output), std::move(offset2bag), std::move(bag_size), std::move(max_indices));
 }
 
-void standard_threading_test(int num, dpu::DpuSet* dpu) {
-  // wait for main
-  // std::unique_lock<std::mutex> lk(m);
-  // thread_test_cv.wait(lk, []{return ready;});
+// void standard_threading_test(int num, dpu::DpuSet* dpu) {
+//   // wait for main
+//   // std::unique_lock<std::mutex> lk(m);
+//   // thread_test_cv.wait(lk, []{return ready;});
 
-  std::cout << "TRIAL: std_threading_test: " << num << " - START\n";
-    // PIM-NOTE: UPMEM DPU HOST TEST
-    std::cout << "Starting DPU testing\n";
-    // auto dpu = system.dpus()[num % 10];
-    dpu->load("/mnt/scratch3/justin/DISTRIBUTED-PIM-Pytorch/upmem/dpu_task");
-    dpu->exec();
-    dpu->log(std::cout);
-    std::cout << "DPU testing ended\n";
+//   std::cout << "TRIAL: std_threading_test: " << num << " - START\n";
+//     // PIM-NOTE: UPMEM DPU HOST TEST
+//     std::cout << "Starting DPU testing\n";
+//     dpu::DpuSetAsync asyncRank = dpu->async();
+//     // auto dpu = system.dpus()[num % 10];
+//     asyncRank.load("/mnt/scratch3/justin/DISTRIBUTED-PIM-Pytorch/upmem/dpu_task");
+//     asyncRank.call(dpu->exec(), false, true);
+//     asyncRank.log(std::cout);
+//     std::cout << "DPU testing ended\n";
     
-    std::cout << "TRIAL: std_threading_test: " << num << " - END\n";
+//     std::cout << "TRIAL: std_threading_test: " << num << " - END\n";
+// }
+
+void copyCallback(dpu::DpuSet &set, unsigned placehold) {
+  std::vector<long> toDpu { 12345 };
+  set.copy("placeholder", toDpu);
+}
+
+void execCallback(dpu::DpuSet &set, unsigned placehold) {
+  std::cout << "Starting DPU testing\n";
+  set.exec();
+  set.log(std::cout);
 }
 
 // embedding_bag wrapper to enforce contiguity in tensors other than `weight`.
@@ -743,16 +756,47 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
   // PIM-NOTE: THREADING TEST
   // STD:
   std::cout << "TABLE_NO: " << table_no << "\n";
+  std::vector<long> toDpu { table_no };
+  dpu::DpuSet system = dpu::DpuSet::allocateRanks(1);
+  dpu::DpuSetAsync asyncSys = system.async();
+  system.load("/mnt/scratch3/justin/DISTRIBUTED-PIM-Pytorch/upmem/dpu_task");
+  system.copy("table_no", toDpu);
+  asyncSys.call(execCallback, true, true);
+  
+  // try {
+  //   asyncSys.call(execCallback, false, false);
+  // }
+  // catch (dpu::DpuError* err) {
+  //   std::cerr << "excetion in exec init: " << err->what() << std::endl;
+  // }
+  // catch (std::exception) {
+  //   std::cout << "UNKNOWN EXCEPTION" << std::endl;
+  // }
+  
+  // std::cout << "Entering loop" << std::endl;
+  // while (true) {
+  //   try {
+  //     asyncSys.call(copyCallback, false, false);
+  //     std::cout << "DPU Done\n";
+  //     break;
+  //   }
+  //   catch (dpu::DpuError* err) {
+  //     std::cerr << "exception: " << err->what() << std::endl;
+  //   }
+  //   catch (std::exception) {
+  //     std::cout << "UNKNOW EXCEPTION" << std::endl;
+  //   }
+  // }
 
-  auto system = DpuSet::allocate(10);
-  std::vector<std::thread> thread_list;
-  for (int i = 0; i < 10; i++) {
-    thread_list.push_back(std::thread(standard_threading_test, table_no * 10 + i, system.dpus()[i]));
-  }
+  std::cout << "EXEC " << table_no << " ENDED\n";
+  // std::vector<std::thread> thread_list;
+  // for (int i = 0; i < 10; i++) {
+  //   thread_list.push_back(std::thread(standard_threading_test, table_no * 10 + i, system.ranks()[i]));
+  // }
 
-  for (int i = 0; i < 10; i++) {
-    thread_list[i].join();
-  }
+  // for (int i = 0; i < 10; i++) {
+  //   thread_list[i].join();
+  // }
   
   // See [Note: hacky wrapper removal for optional tensor]
   c10::MaybeOwned<Tensor> per_sample_weights_maybe_owned = at::borrow_from_optional_tensor(per_sample_weights_opt);
@@ -778,6 +822,8 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
       weight, indices.contiguous(), offsets.contiguous(), scale_grad_by_freq,
       mode, sparse, per_sample_weights, include_last_offset, padding_idx, table_no);
   }
+  std::cout << "sync\n";
+  asyncSys.sync();
   return out;
 };
 
