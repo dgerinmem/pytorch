@@ -756,13 +756,17 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
   // PIM-NOTE: THREADING TEST
   // STD:
   std::cout << "TABLE_NO: " << table_no << "\n";
-  std::vector<long> toDpu { table_no };
+  std::vector<uint64_t> data { (uint64_t)table_no };
   dpu::DpuSet system = dpu::DpuSet::allocateRanks(1);
-  dpu::DpuSetAsync asyncSys = system.async();
-  system.load("/mnt/scratch3/justin/DISTRIBUTED-PIM-Pytorch/upmem/dpu_task");
-  system.copy("table_no", toDpu);
-  asyncSys.call(execCallback, true, true);
-  
+  dpu::DpuSet* dpu = system.dpus()[0];
+  dpu::DpuSetAsync asyncSys = dpu->async();
+  dpu->load("/home/upmem0016/jwong5/DISTRIBUTED-PIM-Pytorch/upmem/dpu_task");
+  dpu->copy("table_no", data); std::cout << "Copied table_no @ " << table_no << std::endl;
+  dpu->copy("placeholder", data); std::cout << "Copied placeholder\n";
+  dpu->exec();
+  dpu->log(std::cout);
+  //asyncSys.call(execCallback, false, false);
+  //asyncSys.sync();
   // try {
   //   asyncSys.call(execCallback, false, false);
   // }
@@ -822,9 +826,9 @@ embedding_bag(const Tensor &weight, const Tensor &indices,
       weight, indices.contiguous(), offsets.contiguous(), scale_grad_by_freq,
       mode, sparse, per_sample_weights, include_last_offset, padding_idx, table_no);
   }
-  std::cout << "sync\n";
-  asyncSys.sync();
   return out;
+
+
 };
 
 std::tuple<Tensor, Tensor, Tensor, Tensor>
